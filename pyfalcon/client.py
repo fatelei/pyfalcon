@@ -82,10 +82,11 @@ class Client(object):
         :param dict data: Metric data
         """
         if isinstance(payload, dict):
-            payload = json.dumps(payload)
+            payload = json.dumps([payload])
 
             try:
-                requests.post(self.push_api, data=payload)
+                requests.post(
+                    self.push_api, data=payload, timeout=self.timeout)
             except (Timeout, RuntimeError):
                 pass
 
@@ -131,7 +132,7 @@ class Client(object):
         """
         tags = self._format_tags(tags)
         payload = self._format_content(
-            metric, value, step, CounterType.GAUGE. tags)
+            metric, value, step, CounterType.GAUGE, tags)
 
         self._send(payload)
 
@@ -145,7 +146,7 @@ class Client(object):
         """
         tags = self._format_tags(tags)
         payload = self._format_content(
-            metric, count, step, CounterType.COUNTER. tags)
+            metric, count, step, CounterType.COUNTER, tags)
 
         self._send(payload)
 
@@ -159,7 +160,7 @@ class Client(object):
         """
         tags = self._format_tags(tags)
         payload = self._format_content(
-            metric, -count, step, CounterType.COUNTER. tags)
+            metric, -count, step, CounterType.COUNTER, tags)
 
         self._send(payload)
 
