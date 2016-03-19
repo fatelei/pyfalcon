@@ -1,6 +1,8 @@
 # pyfalcon
 Python client for open falcon.
 
+![Build Status](https://travis-ci.org/fatelei/pyfalcon.svg)
+
 # Install
 
 ```
