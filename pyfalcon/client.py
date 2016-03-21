@@ -34,7 +34,7 @@ class Timer(object):
         self.step = step
         self.tags = self.client._format_tags(tags)
         self.payload = self.client._format_content(
-            self.metric, -1, self.step, CounterType.COUNTER, self.tags)
+            self.metric, -1, self.step, CounterType.GAUGE, self.tags)
 
     def __call__(self, func):
         """Override `__call__`."""
@@ -133,34 +133,6 @@ class Client(object):
         tags = self._format_tags(tags)
         payload = self._format_content(
             metric, value, step, CounterType.GAUGE, tags)
-
-        self._send(payload)
-
-    def incr(self, metric, count=1, step=60, tags=None):
-        """Increment using counter type.
-
-        :param str metric: The name of metric, required
-        :param int count: Calculate step, default is 1, optional
-        :param int step: The cycle of report, default is 60s, optional
-        :param dict tags: Tags, optional
-        """
-        tags = self._format_tags(tags)
-        payload = self._format_content(
-            metric, count, step, CounterType.COUNTER, tags)
-
-        self._send(payload)
-
-    def decr(self, metric, count=1, step=60, tags=None):
-        """Decrement using counter type.
-
-        :param str metric: The name of metric, required
-        :param int count: Calculate step, default is 1, optional
-        :param int step: The cycle of report, default is 60s, optional
-        :param dict tags: Tags, optional
-        """
-        tags = self._format_tags(tags)
-        payload = self._format_content(
-            metric, -count, step, CounterType.COUNTER, tags)
 
         self._send(payload)
 
