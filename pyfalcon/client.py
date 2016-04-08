@@ -8,14 +8,18 @@ HTTP Client.
 """
 
 import functools
+import logging
 import json
 import socket
 import time
 import requests
 
 from requests.exceptions import Timeout
+from tornado.httpclient import AsyncHTTPClient
 
 from pyfalcon.macro import CounterType
+
+logger = logging.getLogger(__name__)
 
 
 class Timer(object):
@@ -145,3 +149,30 @@ class Client(object):
         :return: An instance of `pyfalcon.client.Timer`.
         """
         return Timer(self, metric, step, tags)
+
+
+class AsyncClient(Client):
+    """Async client."""
+
+    def _finish(self, response):
+        """Finish callback."""
+        if response.error:
+            logger.error(response.error)
+        else:
+            logger.debug(response.body)
+
+    def _send(self, payload):
+        """Send data to open falcon agent.
+
+        :param dict data: Metric data
+        """
+        if isinstance(payload, dict):
+            payload = json.dumps([payload])
+
+            http_client = AsyncHTTPClient()
+            http_client.fetch(self.push_api,
+                              method="POST",
+                              body=payload,
+                              connect_timeout=self.timeout,
+                              request_timeout=self.timeout,
+                              callback=self._finish)

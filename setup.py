@@ -10,8 +10,11 @@ setup(
     version=__version__,
     author="fatelei",
     author_email="fatelei@gmail.com",
-    description="Lookup location via ip using cz ip",
-    install_requires=["requests"],
+    description="open falcon python client",
+    install_requires=[
+        "requests",
+        "tornado"
+    ],
     packages=["pyfalcon"],
     zip_safe=False,
     url="https://github.com/fatelei/pyfalcon",
