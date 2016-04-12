@@ -14,7 +14,6 @@ import socket
 import time
 import requests
 
-from requests.exceptions import Timeout
 from tornado.httpclient import AsyncHTTPClient
 
 from pyfalcon.macro import CounterType
@@ -91,7 +90,7 @@ class Client(object):
             try:
                 requests.post(
                     self.push_api, data=payload, timeout=self.timeout)
-            except (Timeout, RuntimeError):
+            except Exception:
                 pass
 
     def _format_tags(self, tags_dict):
