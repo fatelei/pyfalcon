@@ -67,26 +67,43 @@ class Timer(object):
 class Client(object):
     """HTTP client."""
 
-    def __init__(self, host=None, port=1988, timeout=1):
+    def __init__(self, host="localhost", port=1988, timeout=1, buf_size=500):
         """Initialize.
 
         :param str host: Open falcon agent host, ip or hostname
         :param int port: Open falcon agent port
+        :param int timeout: Socket connect or recv timeout
+        :param int buf_size: The size of buffer
         """
+        self.buffer = []
+        self.buf_size = buf_size
         self.host = host
         self.port = port
         self.timeout = timeout
         self.endpoint = socket.gethostname()
         self.push_api = "http://{}:{}/v1/push".format(self.host, self.port)
 
+    def _get_buffer(self, payload):
+        """Send data to open falcon agent.
+
+        :param dict data: Metric data
+        :return: A buffer string.
+        """
+        if isinstance(payload, dict):
+            if len(self.buffer) < self.buf_size:
+                self.buffer.append(payload)
+            else:
+                data = json.dumps(self.buffer)
+                self.buffer = [payload]
+                return data
+
     def _send(self, payload):
         """Send data to open falcon agent.
 
         :param dict data: Metric data
         """
-        if isinstance(payload, dict):
-            payload = json.dumps([payload])
-
+        buffer = self._get_buffer(payload)
+        if buffer:
             try:
                 requests.post(
                     self.push_api, data=payload, timeout=self.timeout)
@@ -165,9 +182,8 @@ class AsyncClient(Client):
 
         :param dict data: Metric data
         """
-        if isinstance(payload, dict):
-            payload = json.dumps([payload])
-
+        buffer = self._get_buffer(payload)
+        if buffer:
             http_client = AsyncHTTPClient()
             http_client.fetch(self.push_api,
                               method="POST",

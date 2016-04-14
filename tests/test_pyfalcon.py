@@ -9,13 +9,14 @@ Pyfalcon unittests.
 
 import unittest
 
+from pyfalcon.client import Client
+
 
 class TestPyFalcon(unittest.TestCase):
     """Pyfalcon unittests."""
 
     def setUp(self):
         """Setup some environment for per test."""
-        from pyfalcon.client import Client
         self.c = Client(host="localhost")
 
     def test_format_content(self):
@@ -43,3 +44,13 @@ class TestPyFalcon(unittest.TestCase):
         self.assertNotEqual(0, len(tags))
         self.assertIn("idc=lg", tags)
         self.assertIn("loc=beijing", tags)
+
+    def test_get_buffer(self):
+        """Test method `_get_buffer`."""
+        c = Client(buf_size=2)
+        rst = c._get_buffer({"value": 2})
+        self.assertTrue(rst is None)
+
+        c._get_buffer({"value": 2})
+        rst = c._get_buffer({"value": 2})
+        self.assertTrue(rst is not None)
