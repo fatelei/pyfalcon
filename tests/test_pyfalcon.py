@@ -7,6 +7,7 @@ tests.test_pyfalcon.
 Pyfalcon unittests.
 """
 
+import time
 import unittest
 
 from pyfalcon.client import Client
@@ -21,7 +22,7 @@ class TestPyFalcon(unittest.TestCase):
 
     def test_format_content(self):
         """Test method `_format_content`."""
-        payload = self.c._format_content("test", 1, 60, "GAUGE", "")
+        payload = self.c._format_content("test", 1, "GAUGE", "")
         self.assertIn("endpoint", payload)
         self.assertIn("metric", payload)
         self.assertIn("value", payload)
@@ -47,10 +48,11 @@ class TestPyFalcon(unittest.TestCase):
 
     def test_get_buffer(self):
         """Test method `_get_buffer`."""
-        c = Client(buf_size=2)
-        rst = c._get_buffer({"value": 2})
+        c = Client(step=10)
+        payload = c._format_content("test", 1, "GAUGE", "")
+        rst = c._get_buffer(payload)
         self.assertTrue(rst is None)
 
-        c._get_buffer({"value": 2})
-        rst = c._get_buffer({"value": 2})
+        time.sleep(10)
+        rst = c._get_buffer(payload)
         self.assertTrue(rst is not None)

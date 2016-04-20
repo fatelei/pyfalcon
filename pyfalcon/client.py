@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 class Timer(object):
     """Timer."""
 
-    def __init__(self, client, metric, step=60, tags=None):
+    def __init__(self, client, metric, tags=None):
         """Initialize.
 
         :param object client: An instance of `pyfalcon.client.Client`
@@ -34,7 +34,7 @@ class Timer(object):
         """
         self.client = client
         self.metric = metric
-        self.step = step
+        self.step = client.step
         self.tags = self.client._format_tags(tags)
         self.payload = self.client._format_content(
             self.metric, -1, self.step, CounterType.GAUGE, self.tags)
@@ -67,18 +67,24 @@ class Timer(object):
 class Client(object):
     """HTTP client."""
 
-    def __init__(self, host="localhost", port=1988, timeout=1, buf_size=500):
+    def __init__(self,
+                 host="localhost",
+                 port=1988,
+                 timeout=1,
+                 step=60):
         """Initialize.
 
         :param str host: Open falcon agent host, ip or hostname
         :param int port: Open falcon agent port
         :param int timeout: Socket connect or recv timeout
-        :param int buf_size: The size of buffer
+        :param int step: The period of collecting metric
         """
         self.buffer = []
-        self.buf_size = buf_size
+        self.metrics_index = {}
         self.host = host
         self.port = port
+        self.step = step
+        self.start = int(time.time())
         self.timeout = timeout
         self.endpoint = socket.gethostname()
         self.push_api = "http://{}:{}/v1/push".format(self.host, self.port)
@@ -90,9 +96,27 @@ class Client(object):
         :return: A buffer string.
         """
         if isinstance(payload, dict):
-            if len(self.buffer) < self.buf_size:
-                self.buffer.append(payload)
+            now = int(time.time())
+            if now - self.start < self.step:
+                index = len(self.buffer)
+                metric = payload["metric"]
+                if metric not in self.metrics_index:
+                    self.metrics_index[metric] = {
+                        "index": index,
+                        "count": 1
+                    }
+                    self.buffer.append(payload)
+                else:
+                    pos = self.metrics_index[metric]
+                    pos["count"] += 1
+                    cur_metric = self.buffer[pos["index"]]
+                    cur_metric["value"] += payload["value"]
             else:
+                self.start = now
+                for metric in self.buffer:
+                    name = metric["metric"]
+                    count = self.metrics_index[name]["count"]
+                    metric["value"] = float(metric["value"]) / count
                 data = json.dumps(self.buffer)
                 self.buffer = [payload]
                 return data
@@ -122,7 +146,7 @@ class Client(object):
         tmp = map(lambda x: "{}={}".format(x[0], x[1]), tags_dict.items())
         return ",".join(tmp)
 
-    def _format_content(self, metric, value, step, counter_type, tags):
+    def _format_content(self, metric, value, counter_type, tags):
         """Generate data to meet with the requirement of open falcon.
 
         :param str metric: The name of metric
@@ -135,14 +159,14 @@ class Client(object):
             "endpoint": self.endpoint,
             "metric": metric,
             "timestamp": int(time.time()),
-            "step": step,
+            "step": self.step,
             "value": value,
             "counterType": counter_type,
             "tags": tags
         }
         return payload
 
-    def gauge(self, metric, value, step=60, tags=None):
+    def gauge(self, metric, value, tags=None):
         """Collect metric using the type of counter.
 
         :param str metric: The name of metric, required
@@ -152,11 +176,11 @@ class Client(object):
         """
         tags = self._format_tags(tags)
         payload = self._format_content(
-            metric, value, step, CounterType.GAUGE, tags)
+            metric, value, CounterType.GAUGE, tags)
 
         self._send(payload)
 
-    def timer(self, metric, step=60, tags=None):
+    def timer(self, metric, tags=None):
         """Timer used to record response time.
 
         :param str metric: The name of metric
@@ -164,7 +188,7 @@ class Client(object):
         :param dict tags: Tags, optional
         :return: An instance of `pyfalcon.client.Timer`.
         """
-        return Timer(self, metric, step, tags)
+        return Timer(self, metric, tags)
 
 
 class AsyncClient(Client):
